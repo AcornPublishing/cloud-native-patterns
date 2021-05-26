@@ -1,0 +1,66 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: connectionsposts-svc
+spec:
+  selector:
+    app: connectionsposts
+  ports:
+  - protocol: "TCP"
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connectionsposts
+  labels:
+    app: connectionsposts
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: connectionsposts
+  template:
+    metadata:
+      labels:
+        app: connectionsposts
+        appcollection: blog-aggregator
+    spec:
+      containers:
+      - name: connectionsposts
+        image: cdavisafc/cloudnative-troubleshooting-connectionposts:latest
+        env:
+          - name: INSTANCE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: SPRING_APPLICATION_JSON
+            value: '{"spring":{"zipkin":{"baseUrl":"http://zipkin-svc:9411/"}}}'
+          - name: CONNECTIONPOSTSCONTROLLER_POSTSURL
+            value: "http://posts-svc/posts?userIds="
+          - name: CONNECTIONPOSTSCONTROLLER_CONNECTIONSURL
+            value: "http://connections-svc/connections/"
+          - name: CONNECTIONPOSTSCONTROLLER_USERSURL
+            value: "http://connections-svc/users/"
+          - name: CONNECTIONPOSTSCONTROLLER_IMPLEMENTRETRIES
+            value: "true"
+          - name: CONNECTIONPOSTSCONTROLLER_CONNECTTIMEOUT
+            value: "500"
+          - name: CONNECTIONPOSTSCONTROLLER_READTIMEOUT
+            value: "500"
+          - name: REDIS_HOSTNAME
+            value: "redis-svc"
+          - name: REDIS_PORT
+            value: "6379"
+          - name: SPRING_APPLICATION_NAME
+            value: "mycookbook-connectionsposts"
+          - name: SPRING_CLOUD_CONFIG_URI
+            value: "http://sccs-svc:8888"
+          - name: SPRING_SLEUTH_SAMPLER_PERCENTAGE
+            value: "0.01"
+          - name: SPRING_CLOUD_CONFIG_NAME
+            value: "mycookbook"
+          - name: VERSIONING_TRIGGER
+            value: "2"
